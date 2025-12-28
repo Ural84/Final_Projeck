@@ -1,0 +1,43 @@
+# Бинарные файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+scheduler
+main
+
+# Файлы базы данных
+*.db
+*.sqlite
+*.sqlite3
+scheduler.db
+test_db.db
+
+# Логи
+*.log
+/tmp/
+
+# Временные файлы
+*.tmp
+*.temp
+*~
+
+# IDE файлы
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Go специфичные файлы
+vendor/
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Системные файлы
+Thumbs.db
+desktop.ini
+
