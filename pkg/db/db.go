@@ -8,10 +8,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Глобальная переменная для хранения подключения к базе данных
+// Переменная для хранения подключения к базе данных
 var db *sql.DB
 
-// schema содержит SQL команды для создания таблицы scheduler и индекса
+// SQL команды для создания таблицы и индекса
 const schema = `
 CREATE TABLE scheduler (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,9 +24,9 @@ CREATE TABLE scheduler (
 CREATE INDEX idx_scheduler_date ON scheduler(date);
 `
 
-// Init открывает базу данных и при необходимости создаёт таблицу с индексом
+// Открывает базу данных и создаёт таблицу, если её нет
 func Init(dbFile string) error {
-	// Проверяем существование файла базы данных
+	// Проверяем, существует ли файл базы данных
 	_, err := os.Stat(dbFile)
 	var install bool
 	if err != nil {
@@ -53,14 +53,13 @@ func Init(dbFile string) error {
 		}
 	}
 
-	// Сохраняем подключение в глобальную переменную
+	// Сохраняем подключение
 	db = database
 
 	return nil
 }
 
-// GetDB возвращает глобальное подключение к базе данных
+// Возвращает подключение к базе данных
 func GetDB() *sql.DB {
 	return db
 }
-

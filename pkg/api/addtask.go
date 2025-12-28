@@ -10,9 +10,9 @@ import (
 	"scheduler/pkg/db"
 )
 
-// addTaskHandler обрабатывает POST-запросы для добавления задачи
+// Обрабатывает POST-запрос для добавления задачи
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
-	// Декодируем JSON из тела запроса
+	// Читаем JSON из запроса
 	var task db.Task
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&task); err != nil {
@@ -20,13 +20,13 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем обязательное поле title
+	// Проверяем, что указан заголовок задачи
 	if len(task.Title) == 0 {
 		writeJSON(w, map[string]string{"error": "Не указан заголовок задачи"})
 		return
 	}
 
-	// Проверяем и корректируем дату
+	// Проверяем и исправляем дату
 	if err := checkDate(&task); err != nil {
 		writeJSON(w, map[string]string{"error": err.Error()})
 		return
@@ -39,64 +39,59 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Возвращаем успешный ответ с ID
+	// Возвращаем ID добавленной задачи
 	writeJSON(w, map[string]string{"id": formatInt64(id)})
 }
 
-// checkDate проверяет и корректирует дату задачи
+// Проверяет и исправляет дату задачи
 func checkDate(task *db.Task) error {
 	now := time.Now()
 	today := now.Format(DateFormat)
 
-	// Если task.Date пустая строка, присваиваем текущее время
+	// Если дата не указана, ставим сегодняшнюю дату
 	if len(task.Date) == 0 || task.Date == "" {
 		task.Date = today
 	}
 
-	// Проверяем, что в task.Date указана корректная дата
+	// Проверяем, что дата в правильном формате
 	_, err := time.Parse(DateFormat, task.Date)
 	if err != nil {
 		return fmt.Errorf("дата представлена в формате, отличном от 20060102")
 	}
 
-	// СРАВНИВАЕМ СЕГОДНЯШНЮЮ ДАТУ ПОСЛЕ ПРОВЕРКИ ФОРМАТА
-	// Это критично для случая, когда дата равна today - она должна остаться today
-	// независимо от правила повторения
+	// Если дата равна сегодняшней, оставляем её как есть
 	if task.Date == today {
-		// Проверяем корректность правила повторения, если оно указано
+		// Проверяем правило повторения, если оно указано
 		if len(task.Repeat) > 0 && task.Repeat != "" {
 			_, err := NextDate(now, task.Date, task.Repeat)
 			if err != nil {
 				return fmt.Errorf("правило повторения указано в неправильном формате: %w", err)
 			}
 		}
-		// ВАЖНО: Явно устанавливаем сегодняшнюю дату и возвращаемся
-		// Это гарантирует, что дата останется today даже если NextDate вернул другую дату
+		// Явно ставим сегодняшнюю дату
 		task.Date = today
 		return nil
 	}
 
-	// Если дата в прошлом (строго меньше today), корректируем дату
+	// Если дата в прошлом, исправляем её
 	if task.Date < today {
 		if len(task.Repeat) == 0 || task.Repeat == "" {
-			// Если правила повторения нет, берём сегодняшнее число
+			// Если правила повторения нет, ставим сегодняшнюю дату
 			task.Date = today
 		} else {
-			// Проверяем правило на корректность и получаем следующую дату
+			// Вычисляем следующую дату по правилу повторения
 			next, err := NextDate(now, task.Date, task.Repeat)
 			if err != nil {
 				return fmt.Errorf("правило повторения указано в неправильном формате: %w", err)
 			}
-			// Используем вычисленную следующую дату
 			task.Date = next
 		}
 	}
-	// Если task.Date > today, оставляем как есть (не меняем)
 
 	return nil
 }
 
-// formatInt64 преобразует int64 в строку
+// Преобразует число в строку
 func formatInt64(n int64) string {
 	return strconv.FormatInt(n, 10)
 }
