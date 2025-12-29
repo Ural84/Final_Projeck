@@ -5,20 +5,22 @@ import (
 	"time"
 )
 
-// Init регистрирует все API обработчики
+// Регистрирует все обработчики API
 func Init() {
 	http.HandleFunc("/api/nextdate", nextDateHandler)
 	http.HandleFunc("/api/task", taskHandler)
+	http.HandleFunc("/api/tasks", tasksHandler)
+	http.HandleFunc("/api/task/done", doneTaskHandler)
 }
 
-// nextDateHandler обрабатывает GET-запросы к /api/nextdate
+// Обрабатывает GET-запрос для вычисления следующей даты
 func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 	// Получаем параметры из запроса
 	nowStr := r.FormValue("now")
 	dateStr := r.FormValue("date")
 	repeatStr := r.FormValue("repeat")
 
-	// Если параметр now не определён, используем текущую дату
+	// Если параметр now не указан, используем текущую дату
 	var now time.Time
 	if len(nowStr) == 0 {
 		now = time.Now()
@@ -41,7 +43,7 @@ func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Вызываем функцию NextDate
+	// Вычисляем следующую дату
 	nextDate, err := NextDate(now, dateStr, repeatStr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -53,4 +55,3 @@ func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(nextDate))
 }
-

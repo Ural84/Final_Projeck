@@ -8,48 +8,45 @@ import (
 	"time"
 )
 
-// DateFormat - формат даты YYYYMMDD (20060102)
+// Формат даты для работы с задачами
 const DateFormat = "20060102"
 
-// afterNow возвращает true, если первая дата больше второй (без учёта времени)
+// Проверяет, что дата больше текущей даты (без учета времени)
 func afterNow(date, now time.Time) bool {
-	// Сравниваем только даты, без времени
+	// Берем только дату, без времени
 	dateOnly := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	nowOnly := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	return dateOnly.After(nowOnly)
 }
 
-// NextDate вычисляет следующую дату для задачи в соответствии с правилом повторения
-// now - время, от которого ищется ближайшая дата
-// dstart - исходное время в формате 20060102, от которого начинается отсчёт повторений
-// repeat - правило повторения
-// Возвращает следующую дату в формате 20060102 и ошибку
+// Вычисляет следующую дату для задачи по правилу повторения
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
-	// Если правило пустое, возвращаем ошибку
+	// Проверяем, что правило не пустое
 	if len(repeat) == 0 {
 		return "", errors.New("правило повторения не может быть пустым")
 	}
 
-	// Получаем date из time.Parse(DateFormat, dstart)
+	// Преобразуем строку даты в формат времени
 	date, err := time.Parse(DateFormat, dstart)
 	if err != nil {
 		return "", fmt.Errorf("некорректная дата dstart: %w", err)
 	}
 
+	// Убираем пробелы в начале и конце
 	repeat = strings.TrimSpace(repeat)
 
-	// Разбиваем repeat на составляющие
+	// Разбиваем строку правила на части
 	parts := strings.Split(repeat, " ")
 
-	// Обработка правила "y" - ежегодно
+	// Правило "y" - каждый год
 	if repeat == "y" {
 		originalDay := date.Day()
 		originalMonth := date.Month()
 		
+		// Добавляем год, пока дата не станет больше текущей
 		for {
 			date = date.AddDate(1, 0, 0)
-			// Если была 29 февраля в високосном году, а следующий год не високосный,
-			// то переносим на 1 марта
+			// Если была 29 февраля, а год не високосный, переносим на 1 марта
 			if originalMonth == time.February && originalDay == 29 {
 				if !isLeapYear(date.Year()) {
 					date = time.Date(date.Year(), time.March, 1, 0, 0, 0, 0, time.UTC)
@@ -62,20 +59,20 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return date.Format(DateFormat), nil
 	}
 
-	// Обработка правила "d <число>" - через указанное число дней
+	// Правило "d <число>" - через указанное число дней
 	if len(parts) == 2 && parts[0] == "d" {
-		// Конвертируем интервал в число
+		// Преобразуем число дней в целое число
 		interval, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return "", fmt.Errorf("некорректное число дней: %w", err)
 		}
 
-		// Максимально допустимое число равно 400
+		// Проверяем, что число дней от 1 до 400
 		if interval < 1 || interval > 400 {
 			return "", errors.New("число дней должно быть от 1 до 400")
 		}
 
-		// Увеличиваем date на указанное количество дней до тех пор, пока дата не станет больше now
+		// Добавляем дни, пока дата не станет больше текущей
 		for {
 			date = date.AddDate(0, 0, interval)
 			if afterNow(date, now) {
@@ -86,12 +83,12 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return date.Format(DateFormat), nil
 	}
 
-	// Обработка правила "w <дни недели>" - дни недели (1=понедельник, 7=воскресенье)
+	// Правило "w <дни недели>" - дни недели (1=понедельник, 7=воскресенье)
 	if len(parts) == 2 && parts[0] == "w" {
 		return nextDateWeekly(now, date, parts[1])
 	}
 
-	// Обработка правила "m <дни месяца> [месяцы]" - дни месяца
+	// Правило "m <дни месяца> [месяцы]" - дни месяца
 	if len(parts) >= 2 && parts[0] == "m" {
 		monthsStr := ""
 		if len(parts) > 2 {
@@ -100,16 +97,16 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return nextDateMonthly(now, date, parts[1], monthsStr)
 	}
 
-	// Неизвестное правило
+	// Если правило не распознано, возвращаем ошибку
 	return "", errors.New("неподдерживаемый формат правила повторения")
 }
 
-// nextDateWeekly обрабатывает правило "w <дни недели>" - дни недели (1=понедельник, 7=воскресенье)
+// Обрабатывает правило "w <дни недели>" - дни недели (1=понедельник, 7=воскресенье)
 func nextDateWeekly(now, startDate time.Time, daysStr string) (string, error) {
-	// Создаём массив для допустимых дней недели
-	var weekday [8]bool // индексы 1-7 используются
+	// Массив для хранения допустимых дней недели
+	var weekday [8]bool
 
-	// Парсим дни недели
+	// Разбиваем строку с днями недели
 	dayStrs := strings.Split(daysStr, ",")
 	for _, dayStr := range dayStrs {
 		dayStr = strings.TrimSpace(dayStr)
@@ -123,24 +120,24 @@ func nextDateWeekly(now, startDate time.Time, daysStr string) (string, error) {
 		weekday[day] = true
 	}
 
-	// Начинаем поиск от max(startDate, now)
+	// Начинаем поиск с начальной даты или текущей даты (какая больше)
 	searchStart := startDate
 	if now.After(startDate) {
 		searchStart = now
 	}
 
-	// Ищем ближайший день недели из списка
-	// Проверяем до 14 дней вперёд (2 недели)
+	// Ищем ближайший подходящий день недели
+	// Проверяем 14 дней вперед
 	for i := 0; i < 14; i++ {
 		candidate := searchStart.AddDate(0, 0, i)
 		dayOfWeek := int(candidate.Weekday())
-		// В Go: Sunday=0, Monday=1, ..., Saturday=6
-		// Нам нужно: Monday=1, ..., Sunday=7
+		// В Go воскресенье = 0, понедельник = 1, и т.д.
+		// Нам нужно: понедельник = 1, воскресенье = 7
 		if dayOfWeek == 0 {
 			dayOfWeek = 7
 		}
 
-		// Проверяем, подходит ли день недели
+		// Если день недели подходит и дата больше текущей
 		if weekday[dayOfWeek] && afterNow(candidate, now) {
 			return candidate.Format(DateFormat), nil
 		}
@@ -149,13 +146,13 @@ func nextDateWeekly(now, startDate time.Time, daysStr string) (string, error) {
 	return "", errors.New("не удалось найти следующую дату в пределах 2 недель")
 }
 
-// nextDateMonthly обрабатывает правило "m <дни месяца> [месяцы]"
+// Обрабатывает правило "m <дни месяца> [месяцы]"
 func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (string, error) {
-	// Создаём массивы для допустимых дней и месяцев
-	var dayArray [32]bool // индексы 1-31 используются для обычных дней, -1 и -2 обрабатываются отдельно
-	var monthArray [13]bool // индексы 1-12 используются
+	// Массивы для хранения допустимых дней и месяцев
+	var dayArray [32]bool
+	var monthArray [13]bool
 
-	// Парсим дни месяца
+	// Разбиваем строку с днями месяца
 	dayStrs := strings.Split(daysStr, ",")
 	hasNegativeDays := false
 	for _, dayStr := range dayStrs {
@@ -174,7 +171,7 @@ func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (strin
 		}
 	}
 
-	// Парсим месяцы (опционально)
+	// Разбиваем строку с месяцами (если указана)
 	if len(monthsStr) > 0 {
 		monthStrs := strings.Split(monthsStr, ",")
 		for _, monthStr := range monthStrs {
@@ -189,40 +186,40 @@ func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (strin
 			monthArray[m] = true
 		}
 	} else {
-		// Если месяцы не указаны, все месяцы допустимы
+		// Если месяцы не указаны, разрешаем все месяцы
 		for i := 1; i <= 12; i++ {
 			monthArray[i] = true
 		}
 	}
 
-	// Начинаем поиск от max(startDate, now)
+	// Начинаем поиск с начальной даты или текущей даты (какая больше)
 	searchStart := startDate
 	if now.After(startDate) {
 		searchStart = now
 	}
 
-	// Ищем ближайшую дату, проверяя день за днём
-	// Проверяем до 2 лет вперёд (730 дней)
+	// Ищем ближайшую подходящую дату
+	// Проверяем 730 дней вперед (примерно 2 года)
 	for i := 0; i < 730; i++ {
 		candidate := searchStart.AddDate(0, 0, i)
 		
-		// Проверяем месяц
+		// Проверяем, подходит ли месяц
 		candidateMonth := int(candidate.Month())
 		if !monthArray[candidateMonth] {
 			continue
 		}
 
-		// Проверяем день
+		// Проверяем, подходит ли день
 		candidateDay := candidate.Day()
 		dayMatches := false
 		
 		if dayArray[candidateDay] {
 			dayMatches = true
 		} else if hasNegativeDays {
-			// Проверяем -1 (последний день) и -2 (предпоследний день)
+			// Проверяем -1 (последний день месяца) и -2 (предпоследний день)
 			daysInMonth := daysInMonth(candidate.Year(), candidate.Month())
 			if candidateDay == daysInMonth {
-				// Это последний день месяца, проверяем -1
+				// Это последний день месяца
 				for _, dayStr := range dayStrs {
 					if dayStr == "-1" {
 						dayMatches = true
@@ -230,7 +227,7 @@ func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (strin
 					}
 				}
 			} else if candidateDay == daysInMonth-1 {
-				// Это предпоследний день месяца, проверяем -2
+				// Это предпоследний день месяца
 				for _, dayStr := range dayStrs {
 					if dayStr == "-2" {
 						dayMatches = true
@@ -240,7 +237,7 @@ func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (strin
 			}
 		}
 
-		// Если день и месяц подходят, и дата больше now и не раньше startDate
+		// Если день и месяц подходят, и дата больше текущей
 		if dayMatches && afterNow(candidate, now) && !candidate.Before(startDate) {
 			return candidate.Format(DateFormat), nil
 		}
@@ -249,15 +246,15 @@ func nextDateMonthly(now, startDate time.Time, daysStr, monthsStr string) (strin
 	return "", errors.New("не удалось найти следующую дату в пределах 2 лет")
 }
 
-// daysInMonth возвращает количество дней в месяце
+// Возвращает количество дней в месяце
 func daysInMonth(year int, month time.Month) int {
-	// Первый день следующего месяца минус один день
+	// Берем первый день следующего месяца и вычитаем один день
 	firstOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	firstOfNextMonth := firstOfMonth.AddDate(0, 1, 0)
 	return firstOfNextMonth.AddDate(0, 0, -1).Day()
 }
 
-// isLeapYear проверяет, является ли год високосным
+// Проверяет, является ли год високосным
 func isLeapYear(year int) bool {
 	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
 }
