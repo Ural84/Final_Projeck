@@ -14,7 +14,7 @@ type TasksResp struct {
 // Обрабатывает GET-запрос для получения списка задач
 func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeJSON(w, map[string]string{"error": "метод не поддерживается"})
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "метод не поддерживается"})
 		return
 	}
 
@@ -24,7 +24,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	// Получаем задачи из базы данных (максимум 50)
 	tasks, err := db.Tasks(50, search)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка при получении задач из базы данных: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ошибка при получении задач из базы данных: " + err.Error()})
 		return
 	}
 
@@ -34,7 +34,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Возвращаем список задач
-	writeJSON(w, TasksResp{
+	writeJSON(w, http.StatusOK, TasksResp{
 		Tasks: tasks,
 	})
 }

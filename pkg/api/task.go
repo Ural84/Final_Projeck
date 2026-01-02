@@ -21,9 +21,9 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Отправляет данные в формате JSON
-func writeJSON(w http.ResponseWriter, data any) {
+// Отправляет данные в формате JSON с указанным кодом статуса
+func writeJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)
 }

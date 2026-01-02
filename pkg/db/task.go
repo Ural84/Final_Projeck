@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// Константа для лимита задач по умолчанию
+const defaultTasksLimit = 50
+
 // Структура задачи
 type Task struct {
 	ID      string `json:"id"`
@@ -17,20 +20,25 @@ type Task struct {
 
 // Добавляет задачу в базу данных и возвращает её ID
 func AddTask(task *Task) (int64, error) {
-	var id int64
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
 	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
-	if err == nil {
-		id, err = res.LastInsertId()
+	if err != nil {
+		return 0, err
 	}
-	return id, err
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 // Возвращает список задач из базы данных, отсортированных по дате
 func Tasks(limit int, search string) ([]*Task, error) {
 	// Если лимит не указан или меньше нуля, ставим значение по умолчанию
 	if limit <= 0 {
-		limit = 50
+		limit = defaultTasksLimit
 	}
 
 	var query string

@@ -11,19 +11,19 @@ func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// Получаем ID из параметров запроса
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
-		writeJSON(w, map[string]string{"error": "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Не указан идентификатор"})
 		return
 	}
 
 	// Получаем задачу из базы данных
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": "Задача не найдена"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 		return
 	}
 
 	// Возвращаем задачу
-	writeJSON(w, task)
+	writeJSON(w, http.StatusOK, task)
 }
 
 

@@ -63,3 +63,11 @@ func Init(dbFile string) error {
 func GetDB() *sql.DB {
 	return db
 }
+
+// Close закрывает подключение к базе данных
+func Close() error {
+	if db != nil {
+		return db.Close()
+	}
+	return nil
+}

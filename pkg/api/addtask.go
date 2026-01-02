@@ -16,31 +16,31 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	// Проверяем, что указан заголовок задачи
 	if len(task.Title) == 0 {
-		writeJSON(w, map[string]string{"error": "Не указан заголовок задачи"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Не указан заголовок задачи"})
 		return
 	}
 
 	// Проверяем и исправляем дату
 	if err := checkDate(&task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	// Добавляем задачу в базу данных
 	id, err := db.AddTask(&task)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка при добавлении задачи в базу данных: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ошибка при добавлении задачи в базу данных: " + err.Error()})
 		return
 	}
 
 	// Возвращаем ID добавленной задачи
-	writeJSON(w, map[string]string{"id": formatInt64(id)})
+	writeJSON(w, http.StatusOK, map[string]string{"id": strconv.FormatInt(id, 10)})
 }
 
 // Проверяет и исправляет дату задачи
@@ -89,9 +89,4 @@ func checkDate(task *db.Task) error {
 	}
 
 	return nil
-}
-
-// Преобразует число в строку
-func formatInt64(n int64) string {
-	return strconv.FormatInt(n, 10)
 }
